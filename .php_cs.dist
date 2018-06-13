@@ -1,0 +1,22 @@
+<?php
+
+$finder = PhpCsFixer\Finder::create()
+     ->in(__DIR__.'/{src,tests}')
+;
+
+$header =<<<'HEADER'
+This file is part of Opus-fakturering.
+
+(c) 2017–2018 ITK Development
+
+This source file is subject to the MIT license.
+HEADER;
+
+return PhpCsFixer\Config::create()
+    ->setRules([
+        '@Symfony' => true,
+        'header_comment' => ['header' => $header],
+        'array_syntax' => ['syntax' => 'short'],
+    ])
+    ->setFinder($finder)
+;
