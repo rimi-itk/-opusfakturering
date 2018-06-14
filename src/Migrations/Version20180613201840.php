@@ -1,4 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of Opus-fakturering.
+ *
+ * (c) 2017–2018 ITK Development
+ *
+ * This source file is subject to the MIT license.
+ */
 
 namespace DoctrineMigrations;
 
@@ -10,19 +20,23 @@ use Doctrine\Migrations\AbstractMigration;
  */
 final class Version20180613201840 extends AbstractMigration
 {
-    public function up(Schema $schema) : void
+    public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->abortIf($this->connection->getDatabasePlatform()->getName() !== 'mysql', 'Migration can only be executed safely on \'mysql\'.');
+        $this->abortIf('mysql' !== $this->connection->getDatabasePlatform()->getName(), 'Migration can only be executed safely on \'mysql\'.');
 
-        $this->addSql('CREATE TABLE processed_invoice (type VARCHAR(255) NOT NULL, identifier VARCHAR(255) NOT NULL, PRIMARY KEY(type, identifier)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE account (id INT AUTO_INCREMENT NOT NULL, name VARCHAR(255) NOT NULL, configuration JSON NOT NULL COMMENT \'(DC2Type:json_array)\', PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE invoice (identifier VARCHAR(255) NOT NULL, account_id INT NOT NULL, data JSON NOT NULL COMMENT \'(DC2Type:json_array)\', INDEX IDX_906517449B6B5FBA (account_id), PRIMARY KEY(account_id, identifier)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
+        $this->addSql('ALTER TABLE invoice ADD CONSTRAINT FK_906517449B6B5FBA FOREIGN KEY (account_id) REFERENCES account (id)');
     }
 
-    public function down(Schema $schema) : void
+    public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->abortIf($this->connection->getDatabasePlatform()->getName() !== 'mysql', 'Migration can only be executed safely on \'mysql\'.');
+        $this->abortIf('mysql' !== $this->connection->getDatabasePlatform()->getName(), 'Migration can only be executed safely on \'mysql\'.');
 
-        $this->addSql('DROP TABLE processed_invoice');
+        $this->addSql('ALTER TABLE invoice DROP FOREIGN KEY FK_906517449B6B5FBA');
+        $this->addSql('DROP TABLE account');
+        $this->addSql('DROP TABLE invoice');
     }
 }

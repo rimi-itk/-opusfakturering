@@ -8,7 +8,7 @@
  * This source file is subject to the MIT license.
  */
 
-namespace App\Service;
+namespace App\Service\Harvest;
 
 use GuzzleHttp\Client;
 
@@ -31,7 +31,7 @@ class HarvestApi
     /** @var \Exception */
     private $exception;
 
-    public function __construct(array $config)
+    public function setConfig(array $config)
     {
         $this->config = $config;
     }
