@@ -11,25 +11,31 @@
 namespace App\Service\Exporter;
 
 use App\Entity\Account;
+use App\Entity\Invoice;
 use App\Service\Exporter\Exception\InvalidAccountException;
 use App\Service\Harvest\HarvestApi;
+use Doctrine\ORM\EntityManagerInterface;
 
 class HarvestExporter extends AbstractExporter
 {
+    const ACCOUNT_TYPE = 'harvest';
+
+    private $harvestApi;
+
+    public function __construct(Account $account, EntityManagerInterface $entityManager, HarvestApi $harvestApi)
+    {
+        parent::__construct($account, $entityManager);
+        $this->harvestApi = $harvestApi;
+    }
+
     public function validateAccount(Account $account)
     {
-        throw new InvalidAccountException();
+        if (self::ACCOUNT_TYPE !== $account->getType()) {
+            throw new InvalidAccountException();
+        }
     }
 
-    public function run()
-    {
-        header('Content-type: text/plain');
-        echo var_export(null, true);
-        die(__FILE__.':'.__LINE__.':'.__METHOD__);
-        parent::run();
-    }
-
-    private function getInvoices()
+    public function getInvoices()
     {
         $result = $this->harvestApi->getInvoices([
             'state' => HarvestApi::INVOICE_STATE_DRAFT,
@@ -41,7 +47,7 @@ class HarvestExporter extends AbstractExporter
         return $result->invoices;
     }
 
-    private function process(array $invoices)
+    public function process(array $invoices)
     {
         $defaultValues = [
             'invoice' => [
@@ -57,18 +63,16 @@ class HarvestExporter extends AbstractExporter
         ];
 
         $repository = $this->entityManager->getRepository(Invoice::class);
-        $type = 'harvest';
 
         $rows = [];
         foreach ($invoices as $invoice) {
             $identifier = $invoice->number;
-            $this->output->writeln('Invoice '.$identifier);
-            $existing = $repository->findOneBy(['type' => $type, 'identifier' => $identifier]);
+            $this->info('Invoice '.$identifier);
+            $existing = $repository->findOneBy(['account' => $this->account, 'identifier' => $identifier]);
             if (null !== $existing) {
-                $this->output->writeln(sprintf('Invoice %s already processed. Skipping.', $identifier));
+                $this->info(sprintf('Invoice %s already processed. Skipping.', $identifier));
                 continue;
             }
-            $this->entityManager->persist(new Invoice($type, $identifier));
 
             if (0 === count($invoice->line_items)) {
                 continue;
@@ -82,7 +86,7 @@ class HarvestExporter extends AbstractExporter
             $payerId = $this->getPayerId($project);
 
             if (null === $payerId) {
-                $this->output->writeln('<error>No payer id!</error>');
+                $this->error('No payer id!');
                 $subject = sprintf('Missing payer id. Harvest invoice #%s', $identifier);
                 $message = (new \Swift_Message($subject))
                     ->setFrom('send@example.com')
@@ -148,6 +152,8 @@ class HarvestExporter extends AbstractExporter
                     null, // Positionsnote
                 ];
             }
+
+            $this->entityManager->persist(new Invoice($this->account, $identifier, ['project' => $project]));
         }
 
         return $rows;
@@ -198,7 +204,7 @@ class HarvestExporter extends AbstractExporter
         return null;
     }
 
-    private function format(array $data)
+    public function format(array $data)
     {
         $handle = fopen('php://memory', 'w+b');
 
@@ -210,11 +216,11 @@ class HarvestExporter extends AbstractExporter
         return stream_get_contents($handle);
     }
 
-    private function export($data)
+    public function export($data)
     {
-        $this->output->write($data);
+        $this->debug($data);
 
-        $message = (new \Swift_Message('Hello Email'))
+        $message = (new \Swift_Message('Harvest orders'))
             ->setFrom('send@example.com')
             ->setTo('recipient@example.com')
             ->setBody($data, 'text/plain')

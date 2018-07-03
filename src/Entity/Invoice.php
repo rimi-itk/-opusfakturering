@@ -37,10 +37,11 @@ class Invoice
      */
     private $data;
 
-    public function __construct(string $type, string $identifier)
+    public function __construct(Account $account, string $identifier, array $data = null)
     {
-        $this->type = $type;
+        $this->account = $account;
         $this->identifier = $identifier;
+        $this->data = $data;
     }
 
     /**

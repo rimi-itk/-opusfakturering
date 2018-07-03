@@ -11,8 +11,9 @@
 namespace App\Service\Exporter;
 
 use App\Entity\Account;
-use App\Service\Exporter\Exception\InvalidAccountException;
+use App\Service\Harvest\HarvestApi;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 
 abstract class AbstractExporter
 {
@@ -22,6 +23,12 @@ abstract class AbstractExporter
     /** @var EntityManagerInterface */
     protected $entityManager;
 
+    /** @var \Swift_Mailer */
+    protected $mailer;
+
+    /** @var LoggerInterface */
+    protected $logger;
+
     public function __construct(Account $account, EntityManagerInterface $entityManager)
     {
         $this->validateAccount($account);
@@ -29,17 +36,55 @@ abstract class AbstractExporter
         $this->entityManager = $entityManager;
     }
 
-    public static function getExporter(Account $account, EntityManagerInterface $entityManager)
+    public function setMailer(\Swift_Mailer $mailer)
     {
-        switch ($account->getType()) {
-            case 'harvest':
-                return new HarvestExporter($account, $entityManager);
-        }
+        $this->mailer = $mailer;
 
-        throw new InvalidAccountException();
+        return $this;
+    }
+
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+
+        return $this;
+    }
+
+    public function setHarvestApi(HarvestApi $harvestApi)
+    {
+        $this->harvestApi = $harvestApi;
     }
 
     abstract public function validateAccount(Account $account);
+
+    abstract public function getInvoices();
+
+    abstract public function process(array $invoices);
+
+    abstract public function format(array $data);
+
+    abstract public function export(array $csv);
+
+    protected function info($message, array $context = [])
+    {
+        if (null !== $this->logger) {
+            $this->logger->info($message, $context);
+        }
+    }
+
+    protected function debug($message, array $context = [])
+    {
+        if (null !== $this->logger) {
+            $this->logger->debug($message, $context);
+        }
+    }
+
+    protected function error($message, array $context = [])
+    {
+        if (null !== $this->logger) {
+            $this->logger->error($message, $context);
+        }
+    }
 
     public function run()
     {

@@ -11,8 +11,9 @@
 namespace App\Command;
 
 use App\Entity\Account;
-use App\Service\Exporter\AbstractExporter;
+use App\Service\Exporter\ExporterFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -21,16 +22,21 @@ class HarvestExportCommand extends BaseCommand
     /** @var EntityManagerInterface */
     private $entityManager;
 
+    /** @var ExporterFactory */
+    private $exporterFactory;
+
     /** @var InputInterface */
     private $input;
 
     /** @var OutputInterface */
     private $output;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, ExporterFactory $exporterFactory, LoggerInterface $logger)
     {
         parent::__construct();
         $this->entityManager = $entityManager;
+        $this->exporterFactory = $exporterFactory;
+        $this->logger = $logger;
     }
 
     public function configure()
@@ -50,7 +56,7 @@ class HarvestExportCommand extends BaseCommand
             if ($verbose) {
                 $this->output->writeln(sprintf('Account: %s (%s)', $account->getName(), $account->getType()));
             }
-            $exporter = AbstractExporter::getExporter($account, $this->entityManager);
+            $exporter = $this->exporterFactory->getExporter($account, $this->entityManager, $this->logger);
             $exporter->run();
         }
     }

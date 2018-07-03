@@ -33,8 +33,16 @@ bin/console doctrine:migrations:migrate --no-interaction
 
 ## Processing invoices
 
+Create a new account in the database, e.g.
+
+```sh
+bin/console itk-dev:database:cli <<< 'insert into account(name, configuration) values ("ITK (grafisk service)", "{\"type\": \"harvest\"}");'
+```
+
+`@TODO`: It doesn't really make sense to have a general “harvest” account in this project – the content and processing is unique to “ITK (grafisk service)”.
+
 Run the command
 
 ```sh
-bin/console app:harvest:export
+bin/console app:harvest:export -vv
 ```
